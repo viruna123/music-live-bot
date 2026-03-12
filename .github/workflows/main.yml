@@ -1,0 +1,37 @@
+name: Daily Music Stream
+on:
+  schedule:
+    # ලංකාවේ වේලාවෙන් හවස 5:00 ට (11:30 UTC)
+    - cron: '30 11 * * *'
+  workflow_dispatch: # ඔබට අවශ්‍ය වෙලාවක අතින් පටන් ගැනීමට
+
+jobs:
+  stream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg xvfb pulseaudio
+          npm install puppeteer
+          
+      - name: Run Streaming Script
+        env:
+          YOUTUBE_STREAM_KEY: ${{ secrets.YOUTUBE_STREAM_KEY }}
+        run: |
+          # Virtual Display එකක් සෑදීම
+          Xvfb :99 -screen 0 1280x720x24 &
+          export DISPLAY=:99
+          
+          # Virtual Sound පද්ධතිය පණගැන්වීම
+          pulseaudio --start --exit-idle-time=-1
+          pacmd load-module module-virtual-sink sink_name=vss
+          pacmd set-default-sink vss
+          
+          # Script එක දුවවීම
+          node stream.js &
+          
+          # පැය 1ක් (තත්පර 3600) දුවන්න හැරීම
+          sleep 3600
